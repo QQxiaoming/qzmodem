@@ -22,6 +22,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QThread>
+#include <QDir>
 
 #include <fcntl.h>
 #include <stdbool.h>
@@ -391,9 +392,9 @@ int QRecvZmodem::rz_process_header(char *name, struct zm_fileinfo *zi) {
   /* Check for existing file */
   if (zconv != ZCRESUM && !rxclob && (zmanag & ZF1_ZMMASK) != ZF1_ZMCLOB &&
       (zmanag & ZF1_ZMMASK) != ZF1_ZMAPND) {
-    fout = new QFile(name);
+    fout = new QFile(m_fileDirPath+QDir::separator()+QString(name));
     if (fout->exists() && fout->open(QIODevice::ReadOnly)) {
-      QFileInfo fi(name);
+      QFileInfo fi(m_fileDirPath+QDir::separator()+QString(name));
       char *tmpname;
       char *ptr;
       int i;
@@ -436,7 +437,7 @@ int QRecvZmodem::rz_process_header(char *name, struct zm_fileinfo *zi) {
         i = 0;
         do {
           sprintf(ptr, "%d", i++);
-          QFileInfo fi(tmpname);
+          QFileInfo fi(m_fileDirPath+QDir::separator()+QString(tmpname));
           if (!fi.exists())
             break;
         } while (i < 1000);
@@ -497,9 +498,9 @@ int QRecvZmodem::rz_process_header(char *name, struct zm_fileinfo *zi) {
       }
     }
     if (thisbinary && zconv == ZCRESUM) {
-      fout = new QFile(name_static);
+      fout = new QFile(m_fileDirPath+QDir::separator()+QString(name_static));
       if (fout->open(QIODevice::ReadWrite)) {
-        QFileInfo fi(name_static);
+        QFileInfo fi(m_fileDirPath+QDir::separator()+QString(name_static));
         int can_resume = TRUE;
         if (zmanag == ZF1_ZMCRC) {
           int r = zm->zm_do_crc_check(fout, zi->bytes_total, fi.size());
@@ -530,7 +531,7 @@ int QRecvZmodem::rz_process_header(char *name, struct zm_fileinfo *zi) {
       }
       zi->bytes_skipped = 0;
     }
-    fout = new QFile(name_static);
+    fout = new QFile(m_fileDirPath+QDir::separator()+QString(name_static));
     if (!fout->open(openmode)) {
       qCritical("cannot open %s: %s", name_static, fout->errorString().toUtf8().constData());
       return ERROR;

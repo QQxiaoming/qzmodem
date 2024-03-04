@@ -1,5 +1,6 @@
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QFileInfo>
 
 #include "qsendzmodem.h"
 #include "qrecvzmodem.h"
@@ -80,11 +81,20 @@ void MainWindow::on_pushButton_Start_clicked()
         *ret = true;
     },Qt::BlockingQueuedConnection);
 
+    QString sendFilePath = send;
+    QFileInfo sendFileInfo(sendFilePath);
+    QString sendFileName = sendFileInfo.fileName();
+    QString recvFilePath = recv;
+    QFileInfo recvFileInfo(recvFilePath);
+    QString recvFileName = recvFileInfo.fileName();
+    QString recvFileDir = recvFileInfo.dir().absolutePath();
+
     QStringList testSend;
-    testSend.append(send);
+    testSend.append(sendFilePath);
     QStringList testRecv;
-    testRecv.append(recv);
+    testRecv.append(recvFileName);
     s->setFilePath(testSend,testRecv);
+    r->setFileDirPath(recvFileDir);
 
     connect(s,&QSendZmodem::finished,this,[=]{
         ui->lineEdit_Send->setDisabled(false);

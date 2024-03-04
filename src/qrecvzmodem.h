@@ -30,6 +30,9 @@ class QRecvZmodem : public QThread {
 
 public:
   explicit QRecvZmodem(QObject *parent = nullptr);
+  void setFileDirPath(const QString &path) {
+    m_fileDirPath = path;
+  }
 
 signals:
   void tick(const char *fname, long bytes_sent, long bytes_total, long last_bps,
@@ -78,6 +81,7 @@ private:
   };
   oosb_t *anker = NULL;
 
+  QString m_fileDirPath;
   LowLevelStuff *zm; /* zmodem comm primitives' state */
   // Workspaces
   char tcp_buf[256];          /* Buffer to receive TCP protocol
