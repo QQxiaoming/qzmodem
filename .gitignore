@@ -1,4 +1,5 @@
 # C++ objects and libs
+
 *.slo
 *.lo
 *.o
@@ -6,14 +7,11 @@
 *.la
 *.lai
 *.so
-*.so.*
 *.dll
 *.dylib
 
 # Qt-es
-object_script.*.Release
-object_script.*.Debug
-*_plugin_import.cpp
+
 /.qmake.cache
 /.qmake.stash
 *.pro.user
@@ -22,33 +20,70 @@ object_script.*.Debug
 *.qbs.user.*
 *.moc
 moc_*.cpp
-moc_*.h
 qrc_*.cpp
 ui_*.h
-*.qmlc
-*.jsc
 Makefile*
 *build-*
-*.qm
-*.prl
-
-# Qt unit tests
-target_wrapper.*
 
 # QtCreator
+
 *.autosave
 
-# QtCreator Qml
+# QtCtreator Qml
 *.qmlproject.user
 *.qmlproject.user.*
 
-# QtCreator CMake
-CMakeLists.txt.user*
+# QtCtreator CMake
+CMakeLists.txt.user
 
-# QtCreator 4.8< compilation database
-compile_commands.json
 
-# QtCreator local machine specific files for imported projects
-*creator.user*
+# =========================
+# Operating System Files
+# =========================
 
-*_qmlcache.qrc
+# OSX
+# =========================
+
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Windows
+# =========================
+
+# Windows image file caches
+Thumbs.db
+ehthumbs.db
+
+# Folder config file
+Desktop.ini
+
+# Recycle Bin used on file shares
+$RECYCLE.BIN/
+
+# Windows Installer files
+*.cab
+*.msi
+*.msm
+*.msp
+
+# Windows shortcuts
+*.lnk
