@@ -28,7 +28,7 @@
 #define OK 0
 #define FALSE 0
 #define TRUE 1
-#define ERROR (-1)
+#define ZM_ERROR (-1)
 
 /* Ward Christensen / CP/M parameters - Don't change these! */
 #define ENQ 005

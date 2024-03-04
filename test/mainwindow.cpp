@@ -55,17 +55,17 @@ void MainWindow::on_pushButton_Start_clicked()
     connect(s,&QSendZmodem::sendData,r,&QRecvZmodem::onRecvData);
     connect(r,&QRecvZmodem::sendData,s,&QSendZmodem::onRecvData);
 
-    connect(s,&QSendZmodem::complete,this,[=](const char *filename, int result, size_t size, time_t date){
+    connect(s,&QSendZmodem::complete,this,[=](QString filename, int result, size_t size, time_t date){
         if (result == 0)
-            qDebug("'%s (%zu bytes)': successful send", filename, size);
+            qDebug()<<"'"+filename+" ("+QString::number(size)+" bytes)': successful send";
         else
-            qDebug("'%s': failed to send", filename);
+            qDebug()<<"'"+filename+": failed to send";
     });
-    connect(r,&QRecvZmodem::complete,this,[=](const char *filename, int result, size_t size, time_t date) {
+    connect(r,&QRecvZmodem::complete,this,[=](QString filename, int result, size_t size, time_t date) {
         if (result == 0)
-            qDebug("'%s (%zu bytes)': successful recv", filename, size);
+            qDebug()<<"'"+filename+" ("+QString::number(size)+" bytes)': successful recv";
         else
-            qDebug("'%s': failed to recv", filename);
+            qDebug()<<"'"+filename+": failed to recv";
     });
 
     connect(s,&QSendZmodem::tick,this,[=](const char *fname, long bytes_sent, long bytes_total, long last_bps,

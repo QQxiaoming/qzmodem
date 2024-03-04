@@ -39,7 +39,9 @@
 #include <sys/stat.h>
 #elif defined(Q_OS_WIN)
 #include <windows.h>
+#if defined(Q_CC_MSVC)
 #define PATH_MAX _MAX_PATH
+#endif
 #endif
 
 QRecvZmodem::QRecvZmodem(QObject *parent) : QThread{parent} {
@@ -72,7 +74,7 @@ QRecvZmodem::QRecvZmodem(QObject *parent) : QThread{parent} {
 void QRecvZmodem::run(void) {
   zm->baudrate = zm->io_mode(1);
   int exitcode = 0;
-  if (rz_receive() == ERROR) {
+  if (rz_receive() == ZM_ERROR) {
     exitcode = 0200;
     zm->zreadline_canit();
   }
@@ -111,15 +113,15 @@ int QRecvZmodem::rz_receive_files(struct zm_fileinfo *zi) {
       case ZCOMPL:
         return OK;
       default:
-        return ERROR;
+        return ZM_ERROR;
       case ZFILE:
         break;
       }
       continue;
     default:
       return c;
-    case ERROR:
-      return ERROR;
+    case ZM_ERROR:
+      return ZM_ERROR;
     }
   }
 }
@@ -244,10 +246,10 @@ int QRecvZmodem::rz_zmodem_session_startup(void) {
          it is an echo indicating that the sending
          program is not operational."  */
       qInfo("got ZRINIT");
-      return ERROR;
+      return ZM_ERROR;
     case ZCAN:
       qInfo("got ZCAN");
-      return ERROR;
+      return ZM_ERROR;
     }
   }
   return 0;
@@ -317,7 +319,7 @@ int QRecvZmodem::rz_write_string_to_file(struct zm_fileinfo *zi, char *buf,
     return OK;
   if (thisbinary) {
     if (((size_t)fout->write(buf, n)) != n)
-      return ERROR;
+      return ZM_ERROR;
   } else {
     if (zi->eof_seen)
       return OK;
@@ -401,24 +403,24 @@ int QRecvZmodem::rz_process_header(char *name, struct zm_fileinfo *zi) {
       if (zmanag == ZF1_ZMNEW || zmanag == ZF1_ZMNEWL) {
         if (zmanag == ZF1_ZMNEW) {
           if (fi.lastModified().toSecsSinceEpoch() > zi->modtime) {
-            return ERROR; /* skips file */
+            return ZM_ERROR; /* skips file */
           }
         } else {
           /* newer-or-longer */
           if (((size_t)fi.size()) >= zi->bytes_total &&
               fi.lastModified().toSecsSinceEpoch() > zi->modtime) {
-            return ERROR; /* skips file */
+            return ZM_ERROR; /* skips file */
           }
         }
         fout->close();
       } else if (zmanag == ZF1_ZMCRC) {
         int r = zm->zm_do_crc_check(fout, zi->bytes_total, 0);
-        if (r == ERROR) {
+        if (r == ZM_ERROR) {
           fout->close();
-          return ERROR;
+          return ZM_ERROR;
         }
         if (r != ZCRC_DIFFERS) {
-          return ERROR; /* skips */
+          return ZM_ERROR; /* skips */
         }
         fout->close();
       } else {
@@ -426,7 +428,7 @@ int QRecvZmodem::rz_process_header(char *name, struct zm_fileinfo *zi) {
         fout->close();
         if ((zmanag & ZF1_ZMMASK) != ZF1_ZMCHNG) {
           qInfo("file exists, skipped: %s", name);
-          return ERROR;
+          return ZM_ERROR;
         }
         /* try to rename */
         namelen = strlen(name);
@@ -443,7 +445,7 @@ int QRecvZmodem::rz_process_header(char *name, struct zm_fileinfo *zi) {
         } while (i < 1000);
         if (i == 1000) {
           free(tmpname);
-          return ERROR;
+          return ZM_ERROR;
         }
         free(name_static);
         name_static = (char *)malloc(strlen(tmpname) + 1);
@@ -474,7 +476,7 @@ int QRecvZmodem::rz_process_header(char *name, struct zm_fileinfo *zi) {
   emit approver(name_static, zi->bytes_total, zi->modtime, &ret);
   if (!ret) {
     qInfo("%s: rejected by approver callback", pathname);
-    return ERROR;
+    return ZM_ERROR;
   }
 
   {
@@ -504,7 +506,7 @@ int QRecvZmodem::rz_process_header(char *name, struct zm_fileinfo *zi) {
         int can_resume = TRUE;
         if (zmanag == ZF1_ZMCRC) {
           int r = zm->zm_do_crc_check(fout, zi->bytes_total, fi.size());
-          if (r == ERROR) {
+          if (r == ZM_ERROR) {
             fout->close();
             return ZFERR;
           }
@@ -534,7 +536,7 @@ int QRecvZmodem::rz_process_header(char *name, struct zm_fileinfo *zi) {
     fout = new QFile(m_fileDirPath+QDir::separator()+QString(name_static));
     if (!fout->open(openmode)) {
       qCritical("cannot open %s: %s", name_static, fout->errorString().toUtf8().constData());
-      return ERROR;
+      return ZM_ERROR;
     }
   }
 buffer_it:
@@ -595,7 +597,7 @@ int QRecvZmodem::rz_receive_sector(size_t *Blklen, char *rxbuf,
     else if (firstch == CAN) {
       if (lastrx == CAN) {
         qCritical("Sender Cancelled");
-        return ERROR;
+        return ZM_ERROR;
       } else {
         lastrx = CAN;
         continue;
@@ -628,7 +630,7 @@ int QRecvZmodem::rz_receive_sector(size_t *Blklen, char *rxbuf,
   }
   /* try to stop the bubble machine. */
   zm->zreadline_canit();
-  return ERROR;
+  return ZM_ERROR;
 }
 int QRecvZmodem::rz_receive_sectors(struct zm_fileinfo *zi) {
   int sectnum, sectcurr;
@@ -652,24 +654,24 @@ int QRecvZmodem::rz_receive_sectors(struct zm_fileinfo *zi) {
       if (zi->bytes_total && R_BYTESLEFT(zi) < Blklen)
         Blklen = R_BYTESLEFT(zi);
       zi->bytes_received += Blklen;
-      if (rz_write_string_to_file(zi, secbuf, Blklen) == ERROR)
-        return ERROR;
+      if (rz_write_string_to_file(zi, secbuf, Blklen) == ZM_ERROR)
+        return ZM_ERROR;
       sendchar = ACK;
     } else if (sectcurr == (sectnum & 0377)) {
       qCritical("Received dup Sector");
       sendchar = ACK;
     } else if (sectcurr == WCEOT) {
       if (rz_closeit(zi))
-        return ERROR;
+        return ZM_ERROR;
       zm->xsendline(ACK);
       zm->flush_sendlines();
       zm->zreadline_flushline(); /* Do read next time ... */
       return OK;
-    } else if (sectcurr == ERROR)
-      return ERROR;
+    } else if (sectcurr == ZM_ERROR)
+      return ZM_ERROR;
     else {
       qCritical("Sync Error");
-      return ERROR;
+      return ZM_ERROR;
     }
   }
 }
@@ -694,7 +696,7 @@ et_tu:
       zm->zreadline_getc(1);
       goto et_tu;
     }
-    return ERROR;
+    return ZM_ERROR;
   }
   zm->xsendline(ACK);
   zm->flush_sendlines();
@@ -717,7 +719,7 @@ int QRecvZmodem::rz_receive(void) {
   if (c != 0) {
     if (c == ZCOMPL)
       return OK;
-    if (c == ERROR)
+    if (c == ZM_ERROR)
       goto fubar;
     c = rz_receive_files(&zi);
 
@@ -726,13 +728,13 @@ int QRecvZmodem::rz_receive(void) {
   } else {
     for (;;) {
       timing(1, NULL);
-      if (rz_receive_pathname(&zi, secbuf) == ERROR)
+      if (rz_receive_pathname(&zi, secbuf) == ZM_ERROR)
         goto fubar;
       if (secbuf[0] == 0)
         return OK;
-      if (rz_process_header(secbuf, &zi) == ERROR)
+      if (rz_process_header(secbuf, &zi) == ZM_ERROR)
         goto fubar;
-      if (rz_receive_sectors(&zi) == ERROR)
+      if (rz_receive_sectors(&zi) == ZM_ERROR)
         goto fubar;
 
       double d;
@@ -755,7 +757,7 @@ fubar:
   if (restricted && pathname) {
     qInfo("Program: %s removed.", pathname);
   }
-  return ERROR;
+  return ZM_ERROR;
 }
 int QRecvZmodem::rz_receive_file(struct zm_fileinfo *zi) {
   int c, n;
@@ -769,7 +771,7 @@ int QRecvZmodem::rz_receive_file(struct zm_fileinfo *zi) {
 
   n = 20;
 
-  if (rz_process_header(secbuf, zi) == ERROR) {
+  if (rz_process_header(secbuf, zi) == ZM_ERROR) {
     return (tryzhdrtype = ZSKIP);
   }
 
@@ -807,12 +809,12 @@ int QRecvZmodem::rz_receive_file(struct zm_fileinfo *zi) {
     switch (c) {
     default:
       qDebug("rz_receive_file: zm_get_header returned %d", c);
-      return ERROR;
+      return ZM_ERROR;
     case ZNAK:
     case TIMEOUT:
       if (--n < 0) {
         qDebug("rz_receive_file: zm_get_header returned %d", c);
-        return ERROR;
+        return ZM_ERROR;
       }
     case ZFILE:
       zm->zm_receive_data(secbuf, MAX_BLOCK, &bytes_in_block);
@@ -830,17 +832,17 @@ int QRecvZmodem::rz_receive_file(struct zm_fileinfo *zi) {
       if (rz_closeit(zi)) {
         tryzhdrtype = ZFERR;
         qDebug("rz_receive_file: rz_closeit returned <> 0");
-        return ERROR;
+        return ZM_ERROR;
       }
 #ifdef DEBUGZ
       qDebug("rz_receive_file: normal EOF");
 #endif
-      emit complete(zi->fname, 0, zi->bytes_sent, zi->modtime);
+      emit complete(QString(zi->fname), 0, zi->bytes_sent, zi->modtime);
       return c;
-    case ERROR: /* Too much garbage in header search error */
+    case ZM_ERROR: /* Too much garbage in header search error */
       if (--n < 0) {
         qDebug("rz_receive_file: zm_get_header returned %d", c);
-        return ERROR;
+        return ZM_ERROR;
       }
       write_modem_escaped_string_to_stdout(attn);
       continue;
@@ -854,7 +856,7 @@ int QRecvZmodem::rz_receive_file(struct zm_fileinfo *zi) {
         size_t pos = zm->zm_reclaim_receive_header();
         if (--n < 0) {
           qDebug("rz_receive_file: out of sync");
-          return ERROR;
+          return ZM_ERROR;
         }
         switch (c = zm->zm_receive_data(secbuf, MAX_BLOCK, &bytes_in_block)) {
         case GOTCRCW:
@@ -902,7 +904,7 @@ int QRecvZmodem::rz_receive_file(struct zm_fileinfo *zi) {
                 /* too bad */
                 qDebug("rz_receive_file: bps rate %ld below min %ld", last_bps,
                        min_bps);
-                return ERROR;
+                return ZM_ERROR;
               }
             } else
               low_bps = 0;
@@ -913,7 +915,7 @@ int QRecvZmodem::rz_receive_file(struct zm_fileinfo *zi) {
         if (stop_time && now >= stop_time) {
           /* too bad */
           qDebug("rz_receive_file: reached stop time");
-          return ERROR;
+          return ZM_ERROR;
         }
 
         qInfo("\rBytes received: %7ld/%7ld   BPS:%-6ld ETA %02d:%02d  ",
@@ -929,18 +931,18 @@ int QRecvZmodem::rz_receive_file(struct zm_fileinfo *zi) {
       switch (c = zm->zm_receive_data(secbuf, MAX_BLOCK, &bytes_in_block)) {
       case ZCAN:
         qDebug("rz_receive_file: zm_receive_data returned %d", c);
-        return ERROR;
-      case ERROR: /* CRC error */
+        return ZM_ERROR;
+      case ZM_ERROR: /* CRC error */
         if (--n < 0) {
           qDebug("rz_receive_file: zm_get_header returned %d", c);
-          return ERROR;
+          return ZM_ERROR;
         }
         write_modem_escaped_string_to_stdout(attn);
         continue;
       case TIMEOUT:
         if (--n < 0) {
           qDebug("rz_receive_file: zm_get_header returned %d", c);
-          return ERROR;
+          return ZM_ERROR;
         }
         continue;
       case GOTCRCW:

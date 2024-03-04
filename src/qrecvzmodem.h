@@ -38,7 +38,7 @@ signals:
   void tick(const char *fname, long bytes_sent, long bytes_total, long last_bps,
             int min_left, int sec_left, bool *ret);
   void approver(const char *filename, size_t size, time_t date, bool *ret);
-  void complete(const char *filename, int result, size_t size, time_t date);
+  void complete(QString filename, int result, size_t size, time_t date);
   void sendData(QByteArray data);
   void flushRecv(void);
   void flushSend(void);

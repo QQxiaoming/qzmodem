@@ -29,8 +29,8 @@
 
 #include <stddef.h>
 
-#define ZCRC_DIFFERS (ERROR + 1)
-#define ZCRC_EQUAL (ERROR + 2)
+#define ZCRC_DIFFERS (ZM_ERROR + 1)
+#define ZCRC_EQUAL (ZM_ERROR + 2)
 
 /* These are the values for the escape sequence table. */
 #define ZM_ESCAPE_NEVER ((char)0)
@@ -125,7 +125,7 @@ public:
    *  0: restore original tty mode
    * Returns the output baudrate, or zero on failure
    */
-  int io_mode(int n) { return 0; }
+  int io_mode(int n) { Q_UNUSED(n);return 0; }
 
   int no_timeout; /* when true, readline does not timeout */
   size_t readnum;
