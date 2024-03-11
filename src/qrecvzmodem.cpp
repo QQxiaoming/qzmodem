@@ -44,8 +44,10 @@
 #endif
 #endif
 
-QRecvZmodem::QRecvZmodem(QObject *parent) : QThread{parent} {
-  this->zm = new LowLevelStuff(8192, 16384, 1, 600, 0, 0, 2400, 0, 1400, this);
+QRecvZmodem::QRecvZmodem(int32_t timeout, QObject *parent) : QThread{parent} {
+  int32_t no_timeout = timeout==-1?1:0;
+  timeout = timeout==-1?1000:timeout*10;
+  this->zm = new LowLevelStuff(no_timeout, timeout, 0, 0, 115200, 0, 1400, this);
   this->under_rsh = 0;
   this->restricted = 1;
   this->lzmanag = 0;
@@ -64,6 +66,7 @@ QRecvZmodem::QRecvZmodem(QObject *parent) : QThread{parent} {
   this->tryzhdrtype = ZRINIT;
   this->rxclob = 0;
   this->skip_if_not_found = 0;
+	m_fileDirPath = QDir::homePath();
   connect(this->zm, &LowLevelStuff::sendData, this, &QRecvZmodem::sendData);
   connect(this->zm, &LowLevelStuff::flushRecv, this, &QRecvZmodem::flushRecv);
   connect(this->zm, &LowLevelStuff::flushSend, this, &QRecvZmodem::flushSend);
@@ -101,8 +104,12 @@ int QRecvZmodem::rz_receive_files(struct zm_fileinfo *zi) {
       if (d == 0)
         d = 0.5; /* can happen if timing uses time() */
       bps = (zi->bytes_received - zi->bytes_skipped) / d;
+#ifdef DEBUGZ
       qInfo("Bytes received: %7ld/%7ld   BPS:%-6ld", (long)zi->bytes_received,
             (long)zi->bytes_total, bps);
+#else
+      Q_UNUSED(bps);
+#endif
     }
       /* FALL THROUGH */
     case ZSKIP:
@@ -490,6 +497,7 @@ int QRecvZmodem::rz_process_header(char *name, struct zm_fileinfo *zi) {
     strcpy(pathname, name_static);
     /* overwrite the "waiting to receive" line */
     qInfo("Receiving: %s", name_static);
+    emit transferring(QString(name_static));
     rz_checkpath(name_static);
     if (nflag) {
       free(name_static);
@@ -744,8 +752,12 @@ int QRecvZmodem::rz_receive(void) {
         d = 0.5; /* can happen if timing uses time() */
       bps = (zi.bytes_received - zi.bytes_skipped) / d;
 
+#ifdef DEBUGZ
       qInfo("\rBytes received: %7ld/%7ld   BPS:%-6ld", (long)zi.bytes_received,
             (long)zi.bytes_total, bps);
+#else
+      Q_UNUSED(bps);
+#endif
     }
   }
   return OK;
@@ -816,6 +828,7 @@ int QRecvZmodem::rz_receive_file(struct zm_fileinfo *zi) {
         qDebug("rz_receive_file: zm_get_header returned %d", c);
         return ZM_ERROR;
       }
+      FALLTHROUGH();
     case ZFILE:
       zm->zm_receive_data(secbuf, MAX_BLOCK, &bytes_in_block);
       continue;
@@ -918,9 +931,11 @@ int QRecvZmodem::rz_receive_file(struct zm_fileinfo *zi) {
           return ZM_ERROR;
         }
 
+#ifdef DEBUGZ
         qInfo("\rBytes received: %7ld/%7ld   BPS:%-6ld ETA %02d:%02d  ",
               (long)zi->bytes_received, (long)zi->bytes_total, last_bps,
               minleft, secleft);
+#endif
         bool ret = false;
         emit tick(zi->fname, zi->bytes_received, zi->bytes_total, last_bps,
                   minleft, secleft, &ret);

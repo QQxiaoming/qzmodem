@@ -170,6 +170,24 @@
 
 #define MAX_BLOCK 8192
 
+#ifdef __has_cpp_attribute
+#  define HAS_CPP_ATTRIBUTE(x)       __has_cpp_attribute(x)
+#else
+#  define HAS_CPP_ATTRIBUTE(x)       0
+#endif
+#if defined(__cplusplus)
+#if HAS_CPP_ATTRIBUTE(clang::fallthrough)
+#    define FALLTHROUGH() [[clang::fallthrough]]
+#elif HAS_CPP_ATTRIBUTE(gnu::fallthrough)
+#    define FALLTHROUGH() [[gnu::fallthrough]]
+#elif HAS_CPP_ATTRIBUTE(fallthrough)
+#  define FALLTHROUGH() [[fallthrough]]
+#endif
+#endif
+#ifndef FALLTHROUGH
+#    define FALLTHROUGH() (void)0
+#endif
+
 enum zm_type_enum {
 	ZM_ZMODEM
 };

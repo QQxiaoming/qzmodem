@@ -57,8 +57,10 @@
   } while (0)
 #define DATAADR (txbuf)
 
-QSendZmodem::QSendZmodem(QObject *parent) : QThread{parent} {
-  this->zm = new LowLevelStuff(128, 256, 1, 600, 0, 0, 2400, 1, 1400, this);
+QSendZmodem::QSendZmodem(int32_t timeout,QObject *parent) : QThread{parent} {
+  int32_t no_timeout = timeout==-1?1:0;
+  timeout = timeout==-1?1000:timeout*10;
+  this->zm = new LowLevelStuff(no_timeout, timeout, 0, 0, 115200, 1, 1400, this);
   this->lzconv = 0;
   this->lzmanag = 0;
   this->lskipnocor = 0;
@@ -304,8 +306,10 @@ int QSendZmodem::sz_getnak(void) {
       zm->io_mode(2);
       optiong = TRUE;
       blklen = 1024;
+      FALLTHROUGH();
     case WANTCRC:
       crcflg = TRUE;
+      FALLTHROUGH();
     case NAK:
       /* Spec 8.1: "The sending program awaits a
        * command from the receiving port to start
@@ -372,6 +376,7 @@ int QSendZmodem::sz_transmit_pathname(struct zm_fileinfo *zi) {
     }
   }
   qInfo("Sending: %s", txbuf);
+  emit transferring(QString(txbuf));
   totalleft -= fi.size();
   if (--filesleft <= 0)
     totalleft = 0;
@@ -465,7 +470,11 @@ int QSendZmodem::sz_transmit_file(QString oname, QString remotename) {
   if (d == 0) /* can happen if timing() uses time() */
     d = 0.5;
   bps = zi.bytes_sent / d;
+#ifdef DEBUGZ
   qDebug("Bytes Sent:%7ld   BPS:%-8ld", (long)zi.bytes_sent, bps);
+#else
+  Q_UNUSED(bps);
+#endif
   emit complete(oname, 0, zi.bytes_sent, zi.modtime);
 
   return 0;
@@ -603,6 +612,7 @@ int QSendZmodem::sz_getzrxinit(void) {
     case ZRQINIT:
       if (zm->Rxhdr[ZF0] == ZCOMMAND)
         continue;
+      FALLTHROUGH();
     default:
       zm->zm_send_hex_header(ZNAK);
       continue;
@@ -958,9 +968,11 @@ somemore:
         return ZM_ERROR;
       }
 
+#ifdef DEBUGZ
       qDebug("Bytes Sent:%7ld/%7ld   BPS:%-8ld ETA %02d:%02d  ",
              (long)zi->bytes_sent, (long)zi->bytes_total, last_bps, minleft,
              secleft);
+#endif
       bool more = true;
       emit tick(zi->fname, (long)zi->bytes_sent, (long)zi->bytes_total,
                 last_bps, minleft, secleft, &more);
@@ -998,6 +1010,7 @@ somemore:
       case XOFF: /* Wait a while for an XON */
       case XOFF | 0200:
         zm->zreadline_getc(100);
+        FALLTHROUGH();
       default:
         ++junkcount;
       }
@@ -1180,6 +1193,7 @@ int QSendZmodem::sz_transmit_sector(char *buf, int sectnum, size_t cseclen) {
     case WANTCRC:
       if (firstsec)
         crcflg = TRUE;
+      FALLTHROUGH();
     case NAK:
       qCritical("NAK on sector");
       continue;

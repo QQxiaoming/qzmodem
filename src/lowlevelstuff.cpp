@@ -66,12 +66,9 @@ static const char *frametypes[] = {
 
 const char *LowLevelStuff::Zendnames[4] = {"ZCRCE", "ZCRCG", "ZCRCQ", "ZCRCW"};
 
-LowLevelStuff::LowLevelStuff(size_t readnum, size_t bufsize, int no_timeout,
-                             int rxtimeout, int znulls, int eflag, int baudrate,
+LowLevelStuff::LowLevelStuff(int no_timeout, int rxtimeout, int znulls, int eflag, int baudrate,
                              int zctlesc, int zrwindow, QObject *parent)
     : QObject{parent} {
-  this->readnum = readnum;
-  this->bufsize = bufsize;
   this->no_timeout = no_timeout;
   this->rxtimeout = rxtimeout;
   this->znulls = znulls;
@@ -96,6 +93,7 @@ int LowLevelStuff::zm_get_ascii_char(void) {
     default:
       if (zctlesc && (c < ' '))
         continue;
+      FALLTHROUGH();
     case '\r':
     case '\n':
     case ZDLE:
@@ -804,7 +802,7 @@ again:
       }
       goto again;
     }
-    /* **** FALL THRU TO **** */
+    FALLTHROUGH();
   default:
   agn2:
     if (intro_msg_len > max_intro_msg_len) {
@@ -881,14 +879,14 @@ fifi:
   switch (c) {
   case GOTCAN:
     c = ZCAN;
-  /* **** FALL THRU TO **** */
+    FALLTHROUGH();
   case ZNAK:
   case ZCAN:
   case ZM_ERROR:
   case TIMEOUT:
   case RCDO:
     qCritical("Got %s", frametypes[c + FTOFFSET]);
-  /* **** FALL THRU TO **** */
+    FALLTHROUGH();
   default:
     if (c >= -3 && c <= FRTYPES) {
 #ifdef DEBUGZ

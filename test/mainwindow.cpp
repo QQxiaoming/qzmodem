@@ -50,8 +50,8 @@ void MainWindow::on_pushButton_Start_clicked()
     ui->toolButton_Send->setDisabled(true);
     ui->toolButton_recv->setDisabled(true);
     
-    QSendZmodem *s = new QSendZmodem(this);
-    QRecvZmodem *r = new QRecvZmodem(this);
+    QSendZmodem *s = new QSendZmodem(-1,this);
+    QRecvZmodem *r = new QRecvZmodem(-1,this);
     connect(s,&QSendZmodem::sendData,r,&QRecvZmodem::onRecvData);
     connect(r,&QRecvZmodem::sendData,s,&QSendZmodem::onRecvData);
 

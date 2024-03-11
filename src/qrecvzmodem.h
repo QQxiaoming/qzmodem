@@ -29,12 +29,13 @@ class QRecvZmodem : public QThread {
   Q_OBJECT
 
 public:
-  explicit QRecvZmodem(QObject *parent = nullptr);
+  explicit QRecvZmodem(int32_t timeout = -1, QObject *parent = nullptr);
   void setFileDirPath(const QString &path) {
     m_fileDirPath = path;
   }
 
 signals:
+  void transferring(QString filename);
   void tick(const char *fname, long bytes_sent, long bytes_total, long last_bps,
             int min_left, int sec_left, bool *ret);
   void approver(const char *filename, size_t size, time_t date, bool *ret);
